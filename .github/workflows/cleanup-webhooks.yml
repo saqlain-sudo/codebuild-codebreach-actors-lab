@@ -9,19 +9,17 @@ permissions:
   contents: write
 
 jobs:
-  cleanup-webhooks:
+  cleanup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Delete webhooks older than 12 hours
-        uses: actions/github-script@v7
+      - uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            const HOURS = 12;
-            const LIMIT_MS = HOURS * 60 * 60 * 1000;
+            const LIMIT = 12 * 60 * 60 * 1000;
             const now = Date.now();
 
             const hooks = await github.paginate(
@@ -29,28 +27,20 @@ jobs:
               { owner, repo }
             );
 
-            if (!hooks.length) {
-              core.info("No webhooks found.");
-              return;
-            }
+            console.log(`Found ${hooks.length} hooks`);
 
             for (const hook of hooks) {
-              const created = new Date(hook.created_at).getTime();
-              const age = now - created;
+              const age = now - new Date(hook.created_at).getTime();
 
-              if (age > LIMIT_MS) {
-                core.info(`Deleting webhook ${hook.id}`);
+              if (age > LIMIT) {
+                console.log(`Deleting webhook ${hook.id}`);
 
-                try {
-                  await github.rest.repos.deleteWebhook({
-                    owner,
-                    repo,
-                    hook_id: hook.id
-                  });
-                } catch (e) {
-                  core.warning(`Failed deleting webhook ${hook.id}: ${e.message}`);
-                }
+                await github.rest.repos.deleteWebhook({
+                  owner,
+                  repo,
+                  hook_id: hook.id
+                });
               }
             }
 
-            core.info("Webhook cleanup finished.");
+            console.log("DONE");
