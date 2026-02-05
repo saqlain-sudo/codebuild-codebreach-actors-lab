@@ -1,0 +1,46 @@
+name: Cleanup old webhooks
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # cada hora
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete webhooks older than 12 hours
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          set -e
+
+          NOW=$(date -u +%s)
+          LIMIT=$((12 * 3600))
+
+          echo "Fetching webhooks..."
+
+          hooks=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$OWNER/$REPO/hooks)
+
+          echo "$hooks" | jq -c '.[]' | while read hook; do
+            id=$(echo $hook | jq -r '.id')
+            created=$(echo $hook | jq -r '.created_at')
+
+            created_ts=$(date -d "$created" +%s)
+            age=$((NOW - created_ts))
+
+            if [ $age -gt $LIMIT ]; then
+              echo "Deleting webhook $id (age: $age seconds)"
+
+              curl -s -X DELETE \
+                -H "Authorization: token $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                https://api.github.com/repos/$OWNER/$REPO/hooks/$id
+            fi
+          done
